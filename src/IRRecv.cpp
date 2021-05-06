@@ -37,7 +37,6 @@ bool IRRecv::start(gpio_num_t rx_pin)
     rmt_rx_start(_channel, 1);
     _rx_pin = rx_pin;
     _active = true;
-    return true;
 }
 bool IRRecv::start(int rx_pin)
     {return start((gpio_num_t) rx_pin);}
@@ -91,7 +90,7 @@ uint32_t IRRecv::rx_parse_items(rmt_item32_t* item, int item_num, uint8_t timing
 {
     int w_len = item_num;
     if(w_len < timing_groups[timing].bit_length + 2) {
-        log_w("Item length was only %d bit", w_len);
+        log_e("Item length was only %d bit", w_len);
         return 0;
     }
     if(!rx_header_if(item++, timing)) {
@@ -115,23 +114,23 @@ uint32_t IRRecv::rx_parse_items(rmt_item32_t* item, int item_num, uint8_t timing
 void dump_item(rmt_item32_t* item, size_t sz)
 {
   for (int x=0; x<sz; x++) {
-    log_v("Count: %d  duration0: %d  duration1: %d\n", x,item[x].duration0,item[x].duration1);
+    Serial.printf("Count: %d  duration0: %d  duration1: %d\n", x,item[x].duration0,item[x].duration1);
     if(item[x].duration1==0 || item[x].duration0 == 0 || item[x].duration1 > 0x7f00 || item[x].duration0 > 0x7f00) break;
   }
 }
  
 uint32_t IRRecv::read(char* &timingGroup, bool preferredOnly)
 {
-    if (!available()) return 0;
+    if (!available()) return NULL;
          
     size_t rx_size = 0;
     rmt_item32_t* item = (rmt_item32_t*) xRingbufferReceive(_rb, &rx_size, RMT_RX_BUF_WAIT);
-    if (!item) return 0;
+    if (!item) return NULL;
     //after parsing the data, clear space in the ringbuffer.
     vRingbufferReturnItem(_rb, (void*) item);
-    //dump_item(item,rx_size); 
+    //dump_item(item,rx_size);   // comment here -- venu
     uint32_t rx_data;
-    uint8_t found_timing = 0;
+    uint8_t found_timing =0;
     for (uint8_t timing : _preferred) {
         rx_data = rx_parse_items(item, rx_size / 4, timing);
         if (rx_data) {
@@ -152,21 +151,20 @@ uint32_t IRRecv::read(char* &timingGroup, bool preferredOnly)
         }
     }
     if (found_timing) {
-        timingGroup = (char*) timing_groups[found_timing].tag;
+        timingGroup = timing_groups[found_timing].tag;
     }
     return rx_data;
 }    
 
 void IRRecv::setMargin(uint16_t margin_us) {_margin_us = margin_us;}
 
-uint8_t timingGroupElement(const char* tag)
+uint8_t timingGroupElement(char* tag)
 {
    uint8_t counter = 0;
    for (rmt_timing_t timing : timing_groups) {
        if(timing.tag == tag) return counter;
        counter++;
    }
-   return 0;
 }
 
 bool IRRecv::inPrefVector(uint8_t element)
@@ -175,7 +173,7 @@ bool IRRecv::inPrefVector(uint8_t element)
     return false;
 }
 
-int IRRecv::setPreferred(const char* timing_group)
+int IRRecv::setPreferred(char* timing_group)
 {
     if(timing_group == NULL) {
         _preferred.clear();

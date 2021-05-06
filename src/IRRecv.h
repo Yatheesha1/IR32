@@ -4,6 +4,7 @@
 #include "IR32.h"
 #include "Arduino.h"
 #include "driver/rmt.h"
+#include <vector>
 
 class IRRecv
 {
@@ -17,7 +18,7 @@ class IRRecv
     uint32_t read(char* &timingGroup, bool preferredOnly=false);
     void setMargin(uint16_t margin_us);
     bool inPrefVector(uint8_t element);
-    int setPreferred(const char* timing_group);
+    int setPreferred(char* timing_group);
     int setPreferred(String timing_group);
     void stop();
     bool active();
@@ -31,7 +32,7 @@ class IRRecv
     rmt_channel_t _channel;
     rmt_timing_t _timing;
     gpio_num_t _rx_pin;
-    uint16_t _margin_us = 80;
+    uint16_t _margin_us = 150;  //80 default was, updated by venu to support multiple IR remotes
     std::vector<uint8_t> _preferred;
     RingbufHandle_t _rb = NULL;
     bool _active = false;
